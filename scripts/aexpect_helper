@@ -166,16 +166,16 @@ def main():     # too-many-* pylint:disable=R0914,R0912,R0915
                     output_file.flush()
                     for i in range(len(readers)):
                         buffers[i] += data
+                # If there's data to read from the client --
+                if inpipe_fd in r_fds:
+                    data = os.read(inpipe_fd, 1024)
+                    os.write(shell_fd, data)
                 # os.read() raised an exception or there was nothing to read
                 if check_termination or shell_fd not in r_fds:
                     pid, status = os.waitpid(shell_pid, os.WNOHANG)
                     if pid:
                         status = os.WEXITSTATUS(status)
                         break
-                # If there's data to read from the client --
-                if inpipe_fd in r_fds:
-                    data = os.read(inpipe_fd, 1024)
-                    os.write(shell_fd, data)
 
             server_log.info('Out of the main read loop. Writing status to %s',
                             status_filename)
