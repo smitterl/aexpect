@@ -415,8 +415,12 @@ class Spawn:
         :param sig: The signal to send the process when attempting to kill it.
         """
         if not self.closed:
+            LOG.debug("SM - self.is_alive %s" % self.is_alive())
             self.kill(sig=sig)
             # Wait for the server to exit
+            time.sleep(1)
+            LOG.debug("SM - self.is_alive %s" % self.is_alive())
+            LOG.debug("SM - self.is_defunct %s" % self.is_defunct())
             LOG.debug("SM - Wait for server to exit")
             wait_for_lock(self.lock_server_running_filename)
             LOG.debug("SM - Waited for server to exit")
