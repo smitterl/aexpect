@@ -130,7 +130,10 @@ def main():     # too-many-* pylint:disable=R0914,R0912,R0915
 
             # Read from child and write to files/pipes
             server_log.info('Entering main read loop')
+            loop_count = 0
             while True:
+                loop_count += 1
+                server_log.info(f"SM - loop_count {loop_count}")
                 check_termination = False
                 # Make a list of reader pipes whose buffers are not empty
                 fds = [reader_fd for (i, reader_fd) in enumerate(reader_fds)
@@ -155,6 +158,7 @@ def main():     # too-many-* pylint:disable=R0914,R0912,R0915
                 if shell_fd in r_fds:
                     try:
                         data = os.read(shell_fd, 16384)
+                        server_log.info("SM - Data read successfully.")
                     except OSError:
                         data = b""
                     if not data:
@@ -171,9 +175,11 @@ def main():     # too-many-* pylint:disable=R0914,R0912,R0915
                     pid, status = os.waitpid(shell_pid, os.WNOHANG)
                     if pid:
                         status = os.WEXITSTATUS(status)
+                        server_log.info(f"SM - status is {status} terminating")
                         break
                 # If there's data to read from the client --
                 if inpipe_fd in r_fds:
+                    server_log.info("SM - write to child process")
                     data = os.read(inpipe_fd, 1024)
                     os.write(shell_fd, data)
 
