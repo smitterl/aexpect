@@ -21,6 +21,7 @@ import logging
 import pty
 import tempfile
 import select
+import threading
 
 from aexpect.shared import BASE_DIR
 from aexpect.shared import get_filenames
@@ -59,6 +60,7 @@ def main():     # too-many-* pylint:disable=R0914,R0912,R0915
                         format=logging_format, datefmt=date_format)
     server_log = logging.getLogger()
 
+    server_log.info(f"(pid, thread) ({os.getpid()},{threading.get_ident()})")
     server_log.info('Server %s starting with parameters', str(a_id))
     server_log.info('echo: %s', str(echo))
     server_log.info('readers: %s', str(readers))
@@ -93,6 +95,7 @@ def main():     # too-many-* pylint:disable=R0914,R0912,R0915
             os.execv("/bin/bash", ["/bin/bash", "-c", command])
     else:
         # Parent process
+        server_log.info(f"(shell_pid) {shell_pid}")
         server_log.info('Acquiring server lock on %s',
                         lock_server_running_filename)
         lock_server_running = get_lock_fd(lock_server_running_filename)
@@ -130,7 +133,10 @@ def main():     # too-many-* pylint:disable=R0914,R0912,R0915
 
             # Read from child and write to files/pipes
             server_log.info('Entering main read loop')
+            loop_count = 0
             while True:
+                loop_count += 1
+                server_log.info(f"SM - loop_count {loop_count}")
                 check_termination = False
                 # Make a list of reader pipes whose buffers are not empty
                 fds = [reader_fd for (i, reader_fd) in enumerate(reader_fds)
@@ -155,6 +161,7 @@ def main():     # too-many-* pylint:disable=R0914,R0912,R0915
                 if shell_fd in r_fds:
                     try:
                         data = os.read(shell_fd, 16384)
+                        server_log.info("SM - Data read successfully.")
                     except OSError:
                         data = b""
                     if not data:
@@ -171,9 +178,11 @@ def main():     # too-many-* pylint:disable=R0914,R0912,R0915
                     pid, status = os.waitpid(shell_pid, os.WNOHANG)
                     if pid:
                         status = os.WEXITSTATUS(status)
+                        server_log.info(f"SM - status is {status} terminating")
                         break
                 # If there's data to read from the client --
                 if inpipe_fd in r_fds:
+                    server_log.info("SM - write to child process")
                     data = os.read(inpipe_fd, 1024)
                     os.write(shell_fd, data)
 

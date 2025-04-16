@@ -14,24 +14,38 @@
 import os
 import fcntl
 import termios
+import logging
+import threading
 
+LOG = logging.getLogger(__name__)
 BASE_DIR = os.environ.get('TMPDIR', '/tmp')
 
 
 def get_lock_fd(filename):
     """Lock a file"""
+    LOG.debug("SM - get_lock_fd")
+    LOG.debug(f"(pid, thread) ({os.getpid()},{threading.get_ident()})")
     if not os.path.exists(filename):
+        LOG.debug(f"(pid, thread) ({os.getpid()},{threading.get_ident()})")
+        LOG.debug(f"SM - will create {filename}")
         with open(filename, "w", encoding="utf-8"):
             pass
+    LOG.debug(f"SM - try open file {filename}")
     lock_fd = os.open(filename, os.O_RDWR)
+    LOG.debug("SM - try get exclusive lock")
     fcntl.lockf(lock_fd, fcntl.LOCK_EX)
+    LOG.debug("SM - Lock obtained, return")
     return lock_fd
 
 
 def unlock_fd(lock_fd):
     """Unlock a file"""
+    LOG.debug("SM - try unlock")
+    LOG.debug(f"(pid, thread) ({os.getpid()},{threading.get_ident()})")
     fcntl.lockf(lock_fd, fcntl.LOCK_UN)
+    LOG.debug("SM - close fd")
     os.close(lock_fd)
+    LOG.debug("SM - closed - return")
 
 
 def is_file_locked(filename):

@@ -14,6 +14,7 @@
 import subprocess
 import signal
 import os
+import threading
 
 
 def getoutput(cmd):
@@ -56,7 +57,15 @@ def safe_kill(pid, sig):
     try:
         os.kill(pid, sig)
         return True
-    except OSError:
+    except OSError as e:
+        LOG.debug(f"(pid, thread) ({os.getpid()},{threading.get_ident()})")
+        LOG.info(f"SM - failed to kill pid {pid}")
+        LOG.info(f"SM - {e}")
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            LOG.info(f"SM - {pid} doesn't exist")
+
         return False
 
 

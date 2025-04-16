@@ -28,6 +28,7 @@ import subprocess
 import locale
 import logging
 
+
 from aexpect.exceptions import ExpectError
 from aexpect.exceptions import ExpectProcessTerminatedError
 from aexpect.exceptions import ExpectTimeoutError
@@ -415,19 +416,29 @@ class Spawn:
         :param sig: The signal to send the process when attempting to kill it.
         """
         if not self.closed:
+            LOG.debug(f"(pid, thread) ({os.getpid()},{threading.get_ident()})")
+            LOG.debug("SM - self.is_alive %s" % self.is_alive())
             self.kill(sig=sig)
             # Wait for the server to exit
+            time.sleep(1)
+            LOG.debug("SM - self.is_alive %s" % self.is_alive())
+            LOG.debug("SM - self.is_defunct %s" % self.is_defunct())
+            LOG.debug("SM - Wait for server to exit")
             wait_for_lock(self.lock_server_running_filename)
+            LOG.debug("SM - Waited for server to exit")
             # Call all cleanup routines
             for hook in self.close_hooks:
                 hook(self)
             # Close reader file descriptors
             self._close_reader_fds()
             self.reader_fds = {}
+            LOG.debug("SM - Remove all used files")
             # Remove all used files
             if 'AEXPECT_DEBUG' not in os.environ:
                 shutil.rmtree(os.path.join(BASE_DIR, f'aexpect_{self.a_id}'))
+            LOG.debug("Try close aexpect helper")
             self._close_aexpect_helper()
+            LOG.debug("Closed aexpect helper")
             self.closed = True
 
     def set_linesep(self, linesep):
